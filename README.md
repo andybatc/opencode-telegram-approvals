@@ -12,8 +12,10 @@ autorizar desde el celular.
 
 ## Estado
 
-⚠️ **Esqueleto.** El puente no está implementado todavía. Este repo define la
-arquitectura y el plan de construcción.
+🚧 **Fase 0 completada / esqueleto.** El puente aún no está implementado, pero la
+viabilidad ya está confirmada: opencode expone el evento `permission.asked` y permite
+responder programáticamente (`POST /permission/:id/reply` o `client.permission.reply()`).
+Ver `docs/INVESTIGACION-FASE-0.md`.
 
 ## Arquitectura (borrador)
 
@@ -28,11 +30,24 @@ arquitectura y el plan de construcción.
 - **bot/gateway**: recibe la decisión (`/approve`, `/deny`) y la traduce de
   vuelta a la API de permisos de opencode.
 
-### Decisiones pendientes (antes de implementar)
+### Decisiones (resueltas en Fase 0)
 
-- [ ] Mecanismo de interceptación de permisos en opencode (hooks vs API).
-- [ ] Cómo esperar la respuesta de Telegram sin bloquear el loop de opencode.
-- [ ] Canal de retorno: `approval.respond` de Hermes vs llamada directa.
+- [x] Mecanismo de interceptación de permisos: evento `permission.asked` via SSE
+  (`GET /event`) o hook de plugin (`event`).
+- [x] Cómo responder sin bloquear: `POST /permission/:requestID/reply` (HTTP, con
+  header `x-opencode-directory`) o `client.permission.reply()` (SDK). No hay driver TTY.
+- [ ] Cómo esperar la respuesta de Telegram (long-poll vs webhook) sin bloquear el
+  loop de opencode.
+
+### Decisión de arquitectura (2 rutas válidas)
+
+1. **Plugin de opencode** (`.opencode/plugins/telegram-permission.ts`): el client SDK
+   viene inyectado; enfoque Espressif (blueprint oficial).
+2. **Puente externo Python/Node**: `opencode serve` + `GET /event` + `POST /permission`
+   — más robusto a upgrades, no requiere plugin.
+
+Se recomienda arrancar por la ruta 2 (puente externo) por ser la más simple y estable,
+y dejar la 1 como mejora futura.
 
 ## Cómo empezar a construir
 
