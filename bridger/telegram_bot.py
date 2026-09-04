@@ -61,8 +61,7 @@ async def run_bot(queue: asyncio.Queue, client: OpencodeClient, config: Config):
             _remove_pending(req_id)
             pending_messages.pop(req_id, None)
             await query.edit_message_text(
-                text=f"{query.message.text}\n\n{'✅ Aprobado' if action == 'approve' else '❌ Denegado'}",
-                parse_mode="Markdown"
+                text=f"{query.message.text}\n\n{'✅ Aprobado' if action == 'approve' else '❌ Denegado'}"
             )
         except Exception as e:
             logger.error("Failed to reply: %s", e)

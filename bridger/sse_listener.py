@@ -63,7 +63,7 @@ class SSEListener:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     data = resp.json()
-                    for item in data.get("requests", []):
+                    for item in data.get("data", []):
                         try:
                             req = normalize_permission_event(item)
                             await self.queue.put(req)
