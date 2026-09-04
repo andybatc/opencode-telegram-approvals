@@ -3,7 +3,6 @@ import asyncio
 import httpx
 import json
 import logging
-from typing import Optional
 from bridger.config import Config
 from bridger.models import PermissionRequest, normalize_permission_event
 
@@ -65,8 +64,11 @@ class SSEListener:
                 if resp.status_code == 200:
                     data = resp.json()
                     for item in data.get("requests", []):
-                        req = normalize_permission_event(item)
-                        await self.queue.put(req)
-                        logger.info("Recovered pending request: %s", req.id)
+                        try:
+                            req = normalize_permission_event(item)
+                            await self.queue.put(req)
+                            logger.info("Recovered pending request: %s", req.id)
+                        except Exception as e:
+                            logger.warning("Failed to parse pending request: %s", e)
         except Exception as e:
             logger.warning("Failed to recover pending permissions: %s", e)
