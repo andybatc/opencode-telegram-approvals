@@ -25,6 +25,9 @@ async def timeout_checker(client: OpencodeClient, config):
                     except Exception as e:
                         logger.error("Failed to auto-reject %s: %s", req.id, e)
                     reqs.remove(req)
+        for sid in list(pending_by_session):
+            if not pending_by_session[sid]:
+                del pending_by_session[sid]
 
 
 async def main():

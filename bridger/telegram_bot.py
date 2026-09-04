@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 pending_messages: dict[str, int] = {}
 pending_by_session: dict[str, list[PermissionRequest]] = {}
 
+
+def _remove_pending(req_id: str) -> None:
+    """Remove a resolved request and clean up empty session entries."""
+    for sess_list in pending_by_session.values():
+        sess_list[:] = [r for r in sess_list if r.id != req_id]
+    for sid in list(pending_by_session):
+        if not pending_by_session[sid]:
+            del pending_by_session[sid]
+
 def format_request(req: PermissionRequest) -> str:
     meta = req.metadata
     cmd = meta.get("command", "")
@@ -49,8 +58,7 @@ async def run_bot(queue: asyncio.Queue, client: OpencodeClient, config: Config):
         reply = "once" if action == "approve" else "reject"
         try:
             await client.reply(req_id, reply, config.opencode_working_dir)
-            for sess_list in pending_by_session.values():
-                sess_list[:] = [r for r in sess_list if r.id != req_id]
+            _remove_pending(req_id)
             pending_messages.pop(req_id, None)
             await query.edit_message_text(
                 text=f"{query.message.text}\n\n{'✅ Aprobado' if action == 'approve' else '❌ Denegado'}",
@@ -67,8 +75,7 @@ async def run_bot(queue: asyncio.Queue, client: OpencodeClient, config: Config):
         req_id = context.args[0]
         try:
             await client.reply(req_id, "once", config.opencode_working_dir)
-            for sess_list in pending_by_session.values():
-                sess_list[:] = [r for r in sess_list if r.id != req_id]
+            _remove_pending(req_id)
             pending_messages.pop(req_id, None)
             await update.message.reply_text(f"✅ Aprobado: `{req_id}`", parse_mode="Markdown")
         except Exception as e:
@@ -81,8 +88,7 @@ async def run_bot(queue: asyncio.Queue, client: OpencodeClient, config: Config):
         req_id = context.args[0]
         try:
             await client.reply(req_id, "reject", config.opencode_working_dir)
-            for sess_list in pending_by_session.values():
-                sess_list[:] = [r for r in sess_list if r.id != req_id]
+            _remove_pending(req_id)
             pending_messages.pop(req_id, None)
             await update.message.reply_text(f"❌ Denegado: `{req_id}`", parse_mode="Markdown")
         except Exception as e:
