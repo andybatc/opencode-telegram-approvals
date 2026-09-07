@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from bridger.config import Config
@@ -10,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 pending_messages: dict[str, int] = {}
 pending_by_session: dict[str, list[PermissionRequest]] = {}
+
+# ponytail: parse_mode Markdown de Telegram rechaza _ * ` [ ] sin cerrar → escaparlos
+def _esc_md(s: str) -> str:
+    return re.sub(r"([_*`\[\]])", r"\\\1", s)
 
 
 def _remove_pending(req_id: str) -> None:
@@ -22,17 +27,17 @@ def _remove_pending(req_id: str) -> None:
 
 def format_request(req: PermissionRequest) -> str:
     meta = req.metadata
-    cmd = meta.get("command", "")
-    cwd = meta.get("cwd", "")
-    patterns = ", ".join(req.patterns) if req.patterns else "(none)"
+    cmd = _esc_md(meta.get("command", ""))
+    cwd = _esc_md(meta.get("cwd", ""))
+    patterns = ", ".join(_esc_md(p) for p in req.patterns) if req.patterns else "(none)"
     return (
         f"🔐 **Permiso solicitado**\n"
-        f"Tool: `{req.tool}`\n"
+        f"Tool: `{_esc_md(req.tool)}`\n"
         f"Patrones: {patterns}\n"
         f"Comando: `{cmd}`\n"
         f"Directorio: `{cwd}`\n"
-        f"Session: `{req.session_id}`\n"
-        f"ID: `{req.id}`\n\n"
+        f"Session: `{_esc_md(req.session_id)}`\n"
+        f"ID: `{_esc_md(req.id)}`\n\n"
         f"¿Aprobar?"
     )
 
@@ -112,7 +117,10 @@ async def run_bot(queue: asyncio.Queue, client: OpencodeClient, config: Config):
     async def queue_consumer():
         while True:
             req = await queue.get()
-            await send_permission(req)
+            try:
+                await send_permission(req)
+            except Exception as e:
+                logger.error("Failed to send permission %s: %s", req.id, e)
 
     await app.initialize()
     await app.start()

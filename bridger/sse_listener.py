@@ -4,7 +4,7 @@ import httpx
 import json
 import logging
 from bridger.config import Config
-from bridger.models import PermissionRequest, normalize_permission_event
+from bridger.models import normalize_permission_event
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,8 @@ class SSEListener:
             data = json.loads(line[6:])
         except json.JSONDecodeError:
             return
-        if data.get("type") in ("permission.asked", "permission.updated"):
+        evt = data.get("event") or data
+        if evt.get("type") in ("permission.asked", "permission.updated"):
             try:
                 req = normalize_permission_event(data)
                 await self.queue.put(req)

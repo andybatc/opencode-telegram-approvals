@@ -58,3 +58,27 @@ def test_normalize_event_with_permissionID_field():
     req = normalize_permission_event(event)
     assert req.id == "req-999"
     assert req.session_id == "sess-222"
+
+
+def test_normalize_event_wrapped_in_event_properties():
+    # El bus real entrega {event: {id, type, properties}}; el tool vive en
+    # properties["permission"], no en properties["type"].
+    event = {
+        "event": {
+            "id": "evt-1",
+            "type": "permission.asked",
+            "properties": {
+                "id": "per_abc123",
+                "sessionID": "ses_xyz",
+                "permission": "bash",
+                "pattern": "/tmp/*",
+                "metadata": {"command": "cat /tmp/x", "cwd": "/proj"},
+            },
+        }
+    }
+    req = normalize_permission_event(event)
+    assert req.id == "per_abc123"
+    assert req.session_id == "ses_xyz"
+    assert req.tool == "bash"
+    assert req.patterns == ["/tmp/*"]
+    assert req.metadata["command"] == "cat /tmp/x"
